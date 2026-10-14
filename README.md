@@ -39,6 +39,7 @@ FindBack/
 +-- docs/                    # Project documentation
 |   +-- DATABASE.md          # Full schema reference (tables, columns, FKs)
 |   +-- SETUP.md             # Local development setup guide
+|   +-- REPORTING.md         # Reporting workflow (store lost/found reports)
 |   +-- GIT_WORKFLOW.md      # Branching & protection conventions
 +-- README.md                # This file
 ```
@@ -80,6 +81,7 @@ php artisan migrate
 
 - [Database schema](docs/DATABASE.md) - tables, columns, relationships, indexes
 - [Local setup](docs/SETUP.md) - install PHP, Composer, PostgreSQL & run the app
+- [Reporting workflow](docs/REPORTING.md) - store lost/found reports (validation, photos, audit, async matching)
 - [Git workflow](docs/GIT_WORKFLOW.md) - branches, protection, PR process
 
 ## License
