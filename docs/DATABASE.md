@@ -213,3 +213,32 @@ Laravel database notifications (polymorphic).
 | `App\Models\ItemMatch`          | `matches`             | belongsTo lostReport, belongsTo foundReport                   |
 | `App\Models\Claim`              | `claims`              | belongsTo report, belongsTo claimant, belongsTo reviewer      |
 | `App\Models\ItemEvent`          | `item_events`         | belongsTo report, belongsTo user                              |
+---
+
+## Data Integrity & Constraints
+
+The schema enforces the following rules (verified against PostgreSQL):
+
+- **Report type** is constrained to `lost` or `found` via a `CHECK` constraint
+  (`reports_type_check`).
+- **Report status** is constrained to `open`, `under_review`, `resolved`,
+  `rejected`, `expired` via `reports_status_check`. *Valid state transitions are
+  enforced by application logic* (a service/state-machine layer), not at the DB
+  level, so the set of legal next-states can evolve without a migration.
+- **Indexes** on `reports`: composite `(community_id, type, status)` for the
+  common "browse reports in a community" query, plus `category_id` and
+  `event_at` (and `status`, `user_id`).
+- **Timestamps are stored in UTC** (`config/app.php` -> `timezone` = `UTC`).
+  Convert to the user local timezone for display at the presentation layer
+  (e.g. Carbon `->timezone($userTz)` in API resources, or client-side).
+- **Foreign keys** are defined on all relations with explicit `ON DELETE`
+  behaviour (see tables above). **Unique constraints** protect slugs, report
+  `uuid`, `(community_id, user_id)` memberships, and `(lost_report_id,
+  found_report_id)` matches.
+- **Public identifiers:** `reports.uuid` is a non-enumerable UUID used for
+  public report URLs. It is *not* an authorization mechanism - authorization is
+  enforced separately (policies) - but it avoids exposing sequential IDs and
+  reduces easy enumeration.
+- **Money (future):** if deposits/fees are added later, store monetary amounts
+  as `integer` (minor units, e.g. cents) or `decimal(p, s)` - never floating
+  point.
