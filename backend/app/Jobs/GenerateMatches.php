@@ -2,7 +2,11 @@
 
 namespace App\Jobs;
 
+use App\Models\ItemMatch;
 use App\Models\Report;
+use App\Models\User;
+use App\Notifications\MatchFound;
+use App\Services\MatchingService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -32,18 +36,19 @@ class GenerateMatches implements ShouldQueue
      */
     public function __construct(
         public int $reportId,
-        public string $algorithmVersion = 'v1.0',
+        public string $algorithmVersion = MatchingService::ALGORITHM_VERSION,
     ) {}
 
     /**
      * Execute the job.
      *
-     * Compares the given report against candidate reports of the opposite
-     * type within the same community and records scored matches. The heavy
-     * comparison logic lives in a dedicated matcher service; this job simply
-     * orchestrates it asynchronously so report submission stays fast.
+     * Compares the given report against candidate reports of the opposite type
+     * within the same community and category, scores each pairing with the
+     * MatchingService, and upserts any candidate that clears the minimum score
+     * threshold into the matches table. Newly created matches trigger a
+     * notification to the owner of the counterpart report.
      */
-    public function handle(): void
+    public function handle(MatchingService $matcher): void
     {
         $report = Report::find($this->reportId);
 
@@ -53,24 +58,77 @@ class GenerateMatches implements ShouldQueue
             return;
         }
 
-        // Opposite type: a "lost" report should be matched against "found" ones, and vice versa.
+        // Only match reports that are still open.
+        if ($report->status !== 'open') {
+            return;
+        }
+
         $oppositeType = $report->type === 'lost' ? 'found' : 'lost';
 
+        // Candidate reports: opposite type, same community & category, still open
+        // (never resolved/rejected/expired), excluding the report itself.
         $candidates = Report::query()
             ->where('community_id', $report->community_id)
+            ->where('category_id', $report->category_id)
             ->where('type', $oppositeType)
             ->where('status', 'open')
             ->whereKeyNot($report->id)
             ->get();
 
-        // TODO: score each candidate and persist App\Models\ItemMatch records.
-        // The scoring/decision logic is intentionally delegated to a matcher
-        // service so this job remains a thin async orchestrator.
-        Log::info('GenerateMatches: evaluated candidates.', [
-            'report_id' => $report->id,
-            'type' => $report->type,
-            'candidates' => $candidates->count(),
-            'algorithm_version' => $this->algorithmVersion,
-        ]);
+        $newMatches = 0;
+
+        foreach ($candidates as $candidate) {
+            $result = $matcher->score($report, $candidate);
+
+            if ($result['score'] < MatchingService::MIN_SCORE) {
+                continue;
+            }
+
+            // Normalize orientation so the unique [lost_report_id, found_report_id]
+            // constraint is stable regardless of which report triggered the job.
+            $lostId = $report->type === 'lost' ? $report->id : $candidate->id;
+            $foundId = $report->type === 'found' ? $report->id : $candidate->id;
+
+            $existing = ItemMatch::where('lost_report_id', $lostId)
+                ->where('found_report_id', $foundId)
+                ->first();
+
+            // Do not clobber a match a human has already accepted or dismissed;
+            // only refresh its score/reasons so retries stay idempotent.
+            if ($existing && $existing->status !== 'pending') {
+                $existing->update([
+                    'score' => $result['score'],
+                    'reasons' => $result['reasons'],
+                    'algorithm_version' => $this->algorithmVersion,
+                ]);
+
+                continue;
+            }
+
+            $match = ItemMatch::updateOrCreate(
+                ['lost_report_id' => $lostId, 'found_report_id' => $foundId],
+                [
+                    'score' => $result['score'],
+                    'reasons' => $result['reasons'],
+                    'status' => 'pending',
+                    'algorithm_version' => $this->algorithmVersion,
+                ],
+            );
+
+            // Notify the counterpart report's owner about a brand-new match.
+            if ($match->wasRecentlyCreated && $candidate->user_id) {
+                $candidate->user?->notify(new MatchFound($match));
+                $newMatches++;
+            }
+        }
+
+        if ($newMatches > 0) {
+            Log::info('GenerateMatches: created new matches.', [
+                'report_id' => $report->id,
+                'new_matches' => $newMatches,
+                'algorithm_version' => $this->algorithmVersion,
+            ]);
+        }
     }
 }
+
