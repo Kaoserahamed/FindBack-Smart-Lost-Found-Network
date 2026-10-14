@@ -41,6 +41,7 @@ FindBack/
 |   +-- SETUP.md             # Local development setup guide
 |   +-- REPORTING.md         # Reporting workflow (store lost/found reports)
 |   +-- MATCHING.md          # Smart matching engine & async processing
+|   +-- CLAIMS.md            # Claims & handover workflow
 |   +-- GIT_WORKFLOW.md      # Branching & protection conventions
 +-- README.md                # This file
 ```
@@ -84,6 +85,7 @@ php artisan migrate
 - [Local setup](docs/SETUP.md) - install PHP, Composer, PostgreSQL & run the app
 - [Reporting workflow](docs/REPORTING.md) - store lost/found reports (validation, photos, audit, async matching)
 - [Matching engine](docs/MATCHING.md) - weighted scoring, async match generation, notifications
+- [Claims & handover](docs/CLAIMS.md) - submit, review (policy), and finalize item handover
 - [Git workflow](docs/GIT_WORKFLOW.md) - branches, protection, PR process
 
 ## License
