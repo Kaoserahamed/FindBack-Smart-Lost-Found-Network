@@ -27,6 +27,22 @@ class ClaimWorkflowTest extends TestCase
         ]);
     }
 
+    /**
+     * Enrol a user as an active member of a community.
+     *
+     * Community isolation is enforced on claim submission, so a claimant must
+     * be a genuine member of the report's community.
+     */
+    private function enroll(User $user, Community $community, string $role = 'member'): void
+    {
+        CommunityMembership::create([
+            'community_id' => $community->id,
+            'user_id' => $user->id,
+            'role' => $role,
+            'status' => 'active',
+        ]);
+    }
+
     public function test_authenticated_user_can_submit_claim_on_found_report(): void
     {
         Storage::fake('local');
@@ -36,6 +52,7 @@ class ClaimWorkflowTest extends TestCase
         $community = Community::factory()->university()->create();
         $category = Category::factory()->create();
         $report = $this->makeFoundReport($owner, $community, $category);
+        $this->enroll($claimant, $community);
 
         $response = $this->actingAs($claimant)->post(route('claims.store', $report), [
             'report_id' => $report->id,
@@ -91,6 +108,10 @@ class ClaimWorkflowTest extends TestCase
             'status' => 'open',
         ]);
 
+        // Enrolled so the request reaches the validation layer, where the
+        // "must be a found report" rule is what rejects it.
+        $this->enroll($claimant, $community);
+
         $response = $this->actingAs($claimant)->post(route('claims.store', $lost), [
             'report_id' => $lost->id,
             'answers' => ['q1' => 'answer'],
@@ -108,6 +129,7 @@ class ClaimWorkflowTest extends TestCase
         $community = Community::factory()->university()->create();
         $category = Category::factory()->create();
         $report = $this->makeFoundReport($owner, $community, $category);
+        $this->enroll($claimant, $community);
 
         $response = $this->actingAs($claimant)->post(route('claims.store', $report), [
             'report_id' => $report->id,

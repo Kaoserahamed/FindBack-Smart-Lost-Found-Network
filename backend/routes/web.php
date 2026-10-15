@@ -2,24 +2,30 @@
 
 use App\Http\Controllers\ClaimController;
 use App\Http\Controllers\LostFoundReportController;
+use App\Http\Controllers\PhotoController;
+use App\Livewire\Dashboard;
 use App\Models\Report;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Validation\ValidationException;
 
 Route::get('/', function () {
     return view('pages.home');
 })->name('home');
 
 // Authentication (minimal session login).
-Route::middleware('guest')->group(function () {
+// Throttled to slow credential-stuffing / brute-force attempts, which were
+// previously unlimited.
+Route::middleware(['guest', 'throttle:5,1'])->group(function () {
     Route::view('/login', 'auth.login')->name('login');
-    Route::post('/login', function (\Illuminate\Http\Request $request) {
+    Route::post('/login', function (Request $request) {
         $credentials = $request->validate([
             'email' => ['required', 'email'],
             'password' => ['required'],
         ]);
 
         if (! auth()->attempt($credentials, $request->boolean('remember'))) {
-            throw \Illuminate\Validation\ValidationException::withMessages([
+            throw ValidationException::withMessages([
                 'email' => 'These credentials do not match our records.',
             ]);
         }
@@ -49,12 +55,14 @@ Route::middleware('auth')->group(function () {
     Route::get('/reports/{report}/matches', fn (Report $report) => view('reports.matches', ['report' => $report]))
         ->name('reports.matches');
 
-    // Dashboard & notifications.
-    Route::view('/dashboard', 'dashboard')->name('dashboard');
+    // Dashboard & notifications (Livewire components - no query logic in views).
+    Route::get('/dashboard', Dashboard::class)->name('dashboard');
     Route::view('/notifications', 'notifications')->name('notifications');
 
     // Submit a claim against a found report.
+    // Throttled because it performs file uploads and writes private data.
     Route::post('/reports/{report}/claims', [ClaimController::class, 'store'])
+        ->middleware('throttle:10,1')
         ->name('claims.store');
 
     // Approve/reject a claim (authorized via ClaimPolicy).
@@ -73,7 +81,9 @@ Route::middleware('auth')->group(function () {
 
         return redirect()->route('home');
     })->name('logout');
+
+    // Private report photos are streamed through an authorized controller that
+    // applies the ReportPolicy - never exposed via a public storage URL.
+    Route::get('/photos/{photo}', [PhotoController::class, 'show'])
+        ->name('photos.show');
 });
-
-
-

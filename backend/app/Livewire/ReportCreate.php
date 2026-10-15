@@ -59,7 +59,10 @@ class ReportCreate extends Component
     public ?string $longitude = null;
 
     // Step 4 — photos
-    #[Validate(['photos' => 'nullable', 'photos.*' => 'array'])]
+    #[Validate([
+        'photos' => 'nullable|array|max:4',
+        'photos.*' => 'image|mimes:jpg,jpeg,png,webp|max:5120',
+    ])]
     public array $photos = [];
 
     /**

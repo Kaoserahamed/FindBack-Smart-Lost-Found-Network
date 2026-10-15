@@ -2,51 +2,39 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\ManageClaimAction;
 use App\Http\Requests\StoreClaimRequest;
 use App\Models\Claim;
 use App\Models\Report;
-use App\Notifications\ClaimStatusUpdated;
-use App\Traits\RecordsItemEvents;
+use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 class ClaimController extends Controller
 {
-    use RecordsItemEvents;
+    public function __construct(
+        private readonly ManageClaimAction $claims,
+    ) {}
 
     /**
      * Store a newly submitted claim against a found report.
      *
-     * The claim, its private verification answers, and the audit-trail entry
-     * are written atomically. Any uploaded evidence is stored in private
-     * storage and only its path is persisted.
+     * All business rules (community isolation, report state, self-claim,
+     * duplicate claims) live in ManageClaimAction so this controller and the
+     * Livewire component behave identically.
      */
     public function store(StoreClaimRequest $request, Report $report): RedirectResponse
     {
-        $claim = DB::transaction(function () use ($request, $report) {
-            /** @var \App\Models\User $user */
-            $user = $request->user();
+        /** @var User $user */
+        $user = $request->user();
 
-            $evidencePath = null;
-            if ($request->hasFile('evidence_path')) {
-                $evidencePath = $request->file('evidence_path')->store("claims/{$report->uuid}", 'local');
-            }
+        $evidencePath = null;
+        if ($request->hasFile('evidence_path')) {
+            $evidencePath = $request->file('evidence_path')->store("claims/{$report->uuid}", 'local');
+        }
 
-            $claim = $report->claims()->create([
-                'claimant_id' => $user->id,
-                'answers' => $request->input('answers'),
-                'evidence_path' => $evidencePath,
-                'status' => 'submitted',
-            ]);
-
-            $this->recordItemEvent($report, 'claim_submitted', $user->id, [
-                'claim_id' => $claim->id,
-            ]);
-
-            return $claim;
-        });
+        $this->claims->submit($user, $report, $request->input('answers'), $evidencePath);
 
         return back()->with('success', 'Your claim has been submitted and is awaiting review.');
     }
@@ -66,27 +54,15 @@ class ClaimController extends Controller
             'decision_reason' => ['required', 'string', 'max:1000'],
         ]);
 
-        /** @var \App\Models\User $user */
+        /** @var User $user */
         $user = $request->user();
 
-        DB::transaction(function () use ($claim, $validated, $user) {
-            $claim->update([
-                'status' => $validated['decision'],
-                'reviewed_by' => $user->id,
-                'reviewed_at' => now(),
-                'decision_reason' => $validated['decision_reason'],
-            ]);
-
-            if ($report = $claim->report) {
-                $this->recordItemEvent($report, 'claim_reviewed', $user->id, [
-                    'claim_id' => $claim->id,
-                    'decision' => $validated['decision'],
-                ]);
-            }
-        });
-
-        // Notify the claimant that their claim was approved or rejected.
-        $claim->claimant?->notify(new ClaimStatusUpdated($claim));
+        $this->claims->review(
+            $user,
+            $claim,
+            $validated['decision'],
+            $validated['decision_reason'],
+        );
 
         $message = $validated['decision'] === 'approved'
             ? 'Claim approved.'
@@ -98,42 +74,18 @@ class ClaimController extends Controller
     /**
      * Finalize the handover for an approved claim.
      *
-     * Runs inside a transaction with a row lock on the claim to prevent race
-     * conditions (e.g. two concurrent handovers). Marks the claim completed,
-     * resolves the report, and records a custody-transfer audit event.
+     * Delegates to ManageClaimAction, which runs inside a transaction with row
+     * locks on both the claim and its report to prevent race conditions (e.g.
+     * two concurrent handovers, or two approved claims for one item).
      */
     public function completeHandover(Request $request, Claim $claim): RedirectResponse
     {
         $this->authorize('review', $claim);
 
-        DB::transaction(function () use ($claim, $request) {
-            // Lock the claim row for the duration of the transaction.
-            $claim = Claim::whereKey($claim->getKey())->lockForUpdate()->firstOrFail();
+        /** @var User $user */
+        $user = $request->user();
 
-            // Idempotency / state guard: only an approved claim can be completed.
-            if ($claim->status !== 'approved') {
-                abort(422, 'Only an approved claim can be completed.');
-            }
-
-            /** @var \App\Models\User $user */
-            $user = $request->user();
-
-            $claim->update([
-                'status' => 'completed',
-            ]);
-
-            $report = $claim->report;
-            $report?->update([
-                'status' => 'resolved',
-            ]);
-
-            if ($report) {
-                $this->recordItemEvent($report, 'custody_transferred', $user->id, [
-                    'claim_id' => $claim->id,
-                    'to_user_id' => $claim->claimant_id,
-                ]);
-            }
-        });
+        $this->claims->completeHandover($user, $claim);
 
         return back()->with('success', 'Handover completed. The item has been returned.');
     }

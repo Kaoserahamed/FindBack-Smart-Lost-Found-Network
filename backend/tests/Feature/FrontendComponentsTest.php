@@ -79,6 +79,7 @@ class FrontendComponentsTest extends TestCase
             ->assertSee('Unique Zanzibar Item')
             ->assertDontSee('Ordinary Book');
     }
+
     public function test_report_create_requires_active_membership_to_submit(): void
     {
         $community = Community::factory()->university()->create();
@@ -178,8 +179,10 @@ class FrontendComponentsTest extends TestCase
         ]);
 
         $outsider = User::factory()->create();
+
+        // An outsider who is not a member of the community is rejected outright
+        // when the component mounts, before any action can be invoked.
         Livewire::actingAs($outsider)->test(ClaimManager::class, ['report' => $report])
-            ->call('review', $claim->id, 'approved')
             ->assertStatus(403);
 
         $this->assertSame('submitted', $claim->fresh()->status);
@@ -198,6 +201,10 @@ class FrontendComponentsTest extends TestCase
         $claim = Claim::factory()->create([
             'report_id' => $report->id, 'claimant_id' => $claimant->id, 'status' => 'submitted',
         ]);
+
+        // The claimant IS a legitimate member, so they may open the page - but
+        // the ClaimPolicy must still forbid reviewing their own claim.
+        $this->activeMember($claimant, $community);
 
         Livewire::actingAs($claimant)->test(ClaimManager::class, ['report' => $report])
             ->call('review', $claim->id, 'approved')
