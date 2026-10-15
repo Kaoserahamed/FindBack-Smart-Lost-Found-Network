@@ -28,6 +28,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             CategoriesTableSeeder::class,
             CommunitiesTableSeeder::class,
+            CommunityMembershipsTableSeeder::class,
         ]);
     }
 }
