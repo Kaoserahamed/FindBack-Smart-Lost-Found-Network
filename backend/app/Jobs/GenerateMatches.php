@@ -4,8 +4,7 @@ namespace App\Jobs;
 
 use App\Models\ItemMatch;
 use App\Models\Report;
-use App\Models\User;
-use App\Notifications\MatchFound;
+use App\Notifications\PotentialMatchFound;
 use App\Services\MatchingService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -117,7 +116,7 @@ class GenerateMatches implements ShouldQueue
 
             // Notify the counterpart report's owner about a brand-new match.
             if ($match->wasRecentlyCreated && $candidate->user_id) {
-                $candidate->user?->notify(new MatchFound($match));
+                $candidate->user?->notify(new PotentialMatchFound($match));
                 $newMatches++;
             }
         }

@@ -8,7 +8,7 @@ use App\Models\Community;
 use App\Models\ItemMatch;
 use App\Models\Report;
 use App\Models\User;
-use App\Notifications\MatchFound;
+use App\Notifications\PotentialMatchFound;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
@@ -65,8 +65,8 @@ class GenerateMatchesTest extends TestCase
         $this->assertSame('pending', $match->status);
         $this->assertNotEmpty($match->reasons);
 
-        Notification::assertSentTo($finder, MatchFound::class);
-        Notification::assertNotSentTo($owner, MatchFound::class);
+        Notification::assertSentTo($finder, PotentialMatchFound::class);
+        Notification::assertNotSentTo($owner, PotentialMatchFound::class);
     }
 
     public function test_does_not_create_match_below_threshold(): void
@@ -184,7 +184,7 @@ class GenerateMatchesTest extends TestCase
         GenerateMatches::dispatch($lost->id); // simulate a retry
 
         $this->assertSame(1, ItemMatch::count());
-        Notification::assertSentTimes(MatchFound::class, 1);
+        Notification::assertSentTimes(PotentialMatchFound::class, 1);
     }
 
     public function test_orientation_is_normalized_when_triggered_by_found_report(): void
@@ -215,6 +215,6 @@ class GenerateMatchesTest extends TestCase
         $match = ItemMatch::first();
         $this->assertSame($lost->id, $match->lost_report_id);
         $this->assertSame($found->id, $match->found_report_id);
-        Notification::assertSentTo($owner, MatchFound::class);
+        Notification::assertSentTo($owner, PotentialMatchFound::class);
     }
 }

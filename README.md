@@ -42,6 +42,7 @@ FindBack/
 |   +-- REPORTING.md         # Reporting workflow (store lost/found reports)
 |   +-- MATCHING.md          # Smart matching engine & async processing
 |   +-- CLAIMS.md            # Claims & handover workflow
+|   +-- NOTIFICATIONS.md     # Notifications & audit trail
 |   +-- GIT_WORKFLOW.md      # Branching & protection conventions
 +-- README.md                # This file
 ```
@@ -86,6 +87,7 @@ php artisan migrate
 - [Reporting workflow](docs/REPORTING.md) - store lost/found reports (validation, photos, audit, async matching)
 - [Matching engine](docs/MATCHING.md) - weighted scoring, async match generation, notifications
 - [Claims & handover](docs/CLAIMS.md) - submit, review (policy), and finalize item handover
+- [Notifications & audit](docs/NOTIFICATIONS.md) - user notifications and item_events audit helper
 - [Git workflow](docs/GIT_WORKFLOW.md) - branches, protection, PR process
 
 ## License
