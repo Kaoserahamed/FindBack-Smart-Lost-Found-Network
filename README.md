@@ -44,6 +44,7 @@ FindBack/
 |   +-- CLAIMS.md            # Claims & handover workflow
 |   +-- NOTIFICATIONS.md     # Notifications & audit trail
 |   +-- TESTING.md           # Testing guide & coverage
+|   +-- FRONTEND.md          # Livewire UI & layout
 |   +-- GIT_WORKFLOW.md      # Branching & protection conventions
 +-- README.md                # This file
 ```
@@ -90,6 +91,7 @@ php artisan migrate
 - [Claims & handover](docs/CLAIMS.md) - submit, review (policy), and finalize item handover
 - [Notifications & audit](docs/NOTIFICATIONS.md) - user notifications and item_events audit helper
 - [Testing](docs/TESTING.md) - test setup, coverage, and how to run the suite
+- [Frontend](docs/FRONTEND.md) - Livewire components, layout, navigation, and UI security
 - [Git workflow](docs/GIT_WORKFLOW.md) - branches, protection, PR process
 
 ## License
