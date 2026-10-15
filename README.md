@@ -43,6 +43,7 @@ FindBack/
 |   +-- MATCHING.md          # Smart matching engine & async processing
 |   +-- CLAIMS.md            # Claims & handover workflow
 |   +-- NOTIFICATIONS.md     # Notifications & audit trail
+|   +-- TESTING.md           # Testing guide & coverage
 |   +-- GIT_WORKFLOW.md      # Branching & protection conventions
 +-- README.md                # This file
 ```
@@ -88,6 +89,7 @@ php artisan migrate
 - [Matching engine](docs/MATCHING.md) - weighted scoring, async match generation, notifications
 - [Claims & handover](docs/CLAIMS.md) - submit, review (policy), and finalize item handover
 - [Notifications & audit](docs/NOTIFICATIONS.md) - user notifications and item_events audit helper
+- [Testing](docs/TESTING.md) - test setup, coverage, and how to run the suite
 - [Git workflow](docs/GIT_WORKFLOW.md) - branches, protection, PR process
 
 ## License
