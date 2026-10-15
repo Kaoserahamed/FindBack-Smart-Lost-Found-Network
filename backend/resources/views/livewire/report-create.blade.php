@@ -155,17 +155,10 @@
                 @if ($step < 4)
                     <button type="button" wire:click="nextStep" class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500">Continue</button>
                 @else
-                    <div class="flex items-center gap-3">
-                        <button type="button" wire:click="save" wire:loading.attr="disabled" wire:target="save"
-                                class="rounded-md px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 disabled:opacity-60">
-                            <span wire:loading.remove wire:target="save">Skip &amp; submit</span>
-                            <span wire:loading wire:target="save">Submitting…</span>
-                        </button>
-                        <button type="submit" wire:loading.attr="disabled" class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-60">
-                            <span wire:loading.remove wire:target="save">Submit Report</span>
-                            <span wire:loading wire:target="save">Submitting…</span>
-                        </button>
-                    </div>
+                    <button type="submit" wire:loading.attr="disabled" class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-60">
+                        <span wire:loading.remove wire:target="save">Submit Report</span>
+                        <span wire:loading wire:target="save">Submitting…</span>
+                    </button>
                 @endif
             </div>
         </div>
