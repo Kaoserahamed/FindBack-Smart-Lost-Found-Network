@@ -283,4 +283,34 @@ class FrontendComponentsTest extends TestCase
             ->assertDontSee('Outsider Community')
             ->assertDontSee('Suspended Community');
     }
+
+    public function test_report_can_be_created_without_photos_or_location(): void
+    {
+        Queue::fake();
+        Storage::fake('local');
+
+        $user = User::factory()->create();
+        $community = Community::factory()->university()->create();
+        $category = Category::factory()->create();
+        $this->activeMember($user, $community);
+
+        // No photos, no latitude/longitude - both are optional.
+        Livewire::actingAs($user)->test(ReportCreate::class)
+            ->set('community_id', $community->id)
+            ->set('category_id', $category->id)
+            ->set('type', 'lost')
+            ->set('title', 'Lost notebook')
+            ->set('description', 'A red notebook, no photo available.')
+            ->set('event_at', now()->subHour()->format('Y-m-d\TH:i'))
+            ->set('location_name', 'Somewhere on campus')
+            ->call('save')
+            ->assertHasNoErrors()
+            ->assertRedirect(route('reports.index'));
+
+        $report = Report::first();
+        $this->assertNotNull($report);
+        $this->assertNull($report->latitude);
+        $this->assertNull($report->longitude);
+        $this->assertSame(0, $report->photos()->count());
+    }
 }

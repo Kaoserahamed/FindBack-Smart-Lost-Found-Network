@@ -26,7 +26,7 @@ listed.
 
 ### ReportCreate (`livewire.report-create`)
 Step-by-step wizard (Classify -> Details -> When & Where -> Photos). Supports
-photo uploads (`WithFileUploads`, up to 4) and location capture.
+photo uploads (`WithFileUploads`, up to 4, optional) and an interactive Leaflet/OpenStreetMap map for optional location selection.
 
 **Authorization:** only communities where the user is an *active member* are
 selectable, and membership is re-checked server-side on `nextStep()` and

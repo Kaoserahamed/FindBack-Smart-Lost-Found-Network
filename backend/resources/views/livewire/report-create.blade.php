@@ -94,17 +94,27 @@
                     <input type="text" wire:model.blur="location_name" class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
                     @error('location_name') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
                 </div>
-                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Latitude <span class="text-gray-400">(optional)</span></label>
-                        <input type="text" wire:model.blur="latitude" class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                        @error('latitude') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Pin the location on the map <span class="text-gray-400">(optional)</span></label>
+                    <p class="text-xs text-gray-400">Click the map to drop a pin, then drag it to fine-tune. Skip this if you're unsure of the exact spot.</p>
+                    <div wire:ignore class="mt-2">
+                        <div x-data="mapPicker()"
+                             data-lat="{{ $latitude }}"
+                             data-lng="{{ $longitude }}"
+                             x-init="init()">
+                            <div x-ref="map" class="z-0 h-72 w-full rounded-md border border-gray-300"></div>
+                            <div class="mt-2 flex items-center justify-between">
+                                <p class="text-xs text-gray-500">
+                                    <span x-show="!$wire.latitude">No location pinned yet.</span>
+                                    <span x-show="$wire.latitude" x-text="'Pinned: ' + $wire.latitude + ', ' + $wire.longitude"></span>
+                                </p>
+                                <button type="button" @click="clear()" x-show="$wire.latitude"
+                                        class="text-xs font-medium text-indigo-600 hover:text-indigo-500">Clear pin</button>
+                            </div>
+                        </div>
                     </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Longitude <span class="text-gray-400">(optional)</span></label>
-                        <input type="text" wire:model.blur="longitude" class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                        @error('longitude') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
-                    </div>
+                    @error('latitude') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+                    @error('longitude') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
                 </div>
             </div>
         @endif
@@ -112,7 +122,8 @@
         @if ($step === 4)
             <div class="space-y-4">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700">Photos <span class="text-gray-400">(up to 4)</span></label>
+                    <label class="block text-sm font-medium text-gray-700">Photos <span class="text-gray-400">(optional, up to 4)</span></label>
+                    <p class="text-xs text-gray-400">Lost items often have no photo — you can skip this and submit without one.</p>
                     <input type="file" wire:model="photos" multiple accept="image/jpeg,image/png,image/webp"
                            class="mt-1 block w-full text-sm text-gray-600 file:mr-3 file:rounded-md file:border-0 file:bg-indigo-50 file:px-3 file:py-2 file:text-sm file:font-medium file:text-indigo-700 hover:file:bg-indigo-100">
                     <div wire:loading wire:target="photos" class="mt-1 text-xs text-gray-500">Uploading…</div>
@@ -144,10 +155,17 @@
                 @if ($step < 4)
                     <button type="button" wire:click="nextStep" class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500">Continue</button>
                 @else
-                    <button type="submit" wire:loading.attr="disabled" class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-60">
-                        <span wire:loading.remove wire:target="save">Submit Report</span>
-                        <span wire:loading wire:target="save">Submitting…</span>
-                    </button>
+                    <div class="flex items-center gap-3">
+                        <button type="button" wire:click="save" wire:loading.attr="disabled" wire:target="save"
+                                class="rounded-md px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 disabled:opacity-60">
+                            <span wire:loading.remove wire:target="save">Skip &amp; submit</span>
+                            <span wire:loading wire:target="save">Submitting…</span>
+                        </button>
+                        <button type="submit" wire:loading.attr="disabled" class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-60">
+                            <span wire:loading.remove wire:target="save">Submit Report</span>
+                            <span wire:loading wire:target="save">Submitting…</span>
+                        </button>
+                    </div>
                 @endif
             </div>
         </div>
