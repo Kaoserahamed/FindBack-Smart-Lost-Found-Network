@@ -258,4 +258,29 @@ class FrontendComponentsTest extends TestCase
         $this->assertSame(1, Claim::count());
         $this->assertSame('submitted', Claim::first()->status);
     }
+
+    public function test_report_create_lists_only_communities_the_user_is_an_active_member_of(): void
+    {
+        $user = User::factory()->create();
+
+        $memberCommunity = Community::factory()->university()->create(['name' => 'Member Community']);
+        $this->activeMember($user, $memberCommunity, 'member');
+
+        // A community the user is NOT a member of.
+        Community::factory()->university()->create(['name' => 'Outsider Community']);
+
+        // A community where the user is suspended.
+        $suspendedCommunity = Community::factory()->university()->create(['name' => 'Suspended Community']);
+        CommunityMembership::create([
+            'community_id' => $suspendedCommunity->id,
+            'user_id' => $user->id,
+            'role' => 'member',
+            'status' => 'suspended',
+        ]);
+
+        Livewire::actingAs($user)->test(ReportCreate::class)
+            ->assertSee('Member Community')
+            ->assertDontSee('Outsider Community')
+            ->assertDontSee('Suspended Community');
+    }
 }

@@ -116,3 +116,8 @@ The app is now available at http://localhost:8000.
 | Fresh DB + migrate           | `php artisan migrate:fresh`   |
 | Open Tinker REPL             | `php artisan tinker`          |
 | List routes                  | `php artisan route:list`      |
+> **Note:** `php artisan db:seed` also creates a `community_memberships` row
+> enrolling the seeded test user (`test@example.com`) as an **active member** of
+> the SUST community. This is required so the community dropdown in the
+> **Create Report** form is populated (it only lists communities you are an
+> active member of).
