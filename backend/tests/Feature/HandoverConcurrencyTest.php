@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Category;
 use App\Models\Claim;
 use App\Models\Community;
+use App\Models\CommunityMembership;
 use App\Models\ItemEvent;
 use App\Models\Report;
 use App\Models\User;
@@ -54,6 +55,14 @@ class HandoverConcurrencyTest extends TestCase
             'community_id' => $community->id,
             'category_id' => $category->id,
             'status' => 'open',
+        ]);
+
+        // The claimant must be an active member of the report's community.
+        CommunityMembership::create([
+            'community_id' => $community->id,
+            'user_id' => $claimant->id,
+            'role' => 'member',
+            'status' => 'active',
         ]);
 
         $answers = ['serial' => 'SN-12345', 'mark' => 'scratch on corner'];

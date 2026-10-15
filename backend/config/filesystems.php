@@ -33,7 +33,15 @@ return [
         'local' => [
             'driver' => 'local',
             'root' => storage_path('app/private'),
-            'serve' => true,
+            // NOTE: intentionally NOT 'serve' => true.
+            //
+            // Enabling `serve` on this disk registers public GET *and PUT*
+            // /storage/{path} routes. The PUT route accepts an arbitrary file
+            // write to the private disk, guarded only by a signed URL whose
+            // validity rests entirely on APP_KEY secrecy. Private report photos
+            // and claim evidence are therefore never exposed through a URL
+            // route; they must be streamed through an authorized controller
+            // (see the PhotoController) which applies the ReportPolicy first.
             'throw' => false,
             'report' => false,
         ],

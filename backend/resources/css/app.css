@@ -6,4 +6,234 @@
 @theme {
     --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
+    
+    /* Enhanced color palette */
+    --color-primary-50: oklch(97% .02 264);
+    --color-primary-100: oklch(94% .04 264);
+    --color-primary-200: oklch(88% .08 264);
+    --color-primary-300: oklch(80% .14 264);
+    --color-primary-400: oklch(68% .2 264);
+    --color-primary-500: oklch(58% .24 264);
+    --color-primary-600: oklch(51% .26 264);
+    --color-primary-700: oklch(45% .24 264);
+    --color-primary-800: oklch(39% .19 264);
+    --color-primary-900: oklch(35% .14 264);
+    --color-primary-950: oklch(25% .09 264);
+    
+    /* Animation */
+    --animate-slide-in-right: slideInRight 0.3s ease-out;
+    --animate-slide-out-right: slideOutRight 0.3s ease-in;
+    --animate-fade-in: fadeIn 0.2s ease-out;
+    --animate-scale-in: scaleIn 0.2s ease-out;
+}
+
+/* Custom animations */
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOutRight {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes scaleIn {
+    from {
+        transform: scale(0.95);
+        opacity: 0;
+    }
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+@keyframes shimmer {
+    0% {
+        background-position: -1000px 0;
+    }
+    100% {
+        background-position: 1000px 0;
+    }
+}
+
+/* Skeleton loading */
+.skeleton {
+    background: linear-gradient(
+        90deg,
+        theme(colors.gray.200) 0%,
+        theme(colors.gray.100) 50%,
+        theme(colors.gray.200) 100%
+    );
+    background-size: 1000px 100%;
+    animation: shimmer 2s infinite;
+}
+
+/* Focus visible improvements */
+*:focus-visible {
+    outline: 2px solid theme(colors.indigo.500);
+    outline-offset: 2px;
+    border-radius: 0.125rem;
+}
+
+/* Smooth scrolling */
+html {
+    scroll-behavior: smooth;
+}
+
+/* Better selection colors */
+::selection {
+    background-color: theme(colors.indigo.200);
+    color: theme(colors.indigo.900);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: theme(colors.gray.100);
+}
+
+::-webkit-scrollbar-thumb {
+    background: theme(colors.gray.400);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: theme(colors.gray.500);
+}
+
+/* Toast notifications */
+.toast-container {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    max-width: 24rem;
+}
+
+.toast {
+    animation: slideInRight 0.3s ease-out;
+    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+}
+
+.toast.removing {
+    animation: slideOutRight 0.3s ease-in forwards;
+}
+
+/* Card hover effects */
+.card-interactive {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card-interactive:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+}
+
+/* Button loading state */
+.btn-loading {
+    position: relative;
+    pointer-events: none;
+}
+
+.btn-loading::after {
+    content: '';
+    position: absolute;
+    width: 1rem;
+    height: 1rem;
+    top: 50%;
+    left: 50%;
+    margin-left: -0.5rem;
+    margin-top: -0.5rem;
+    border: 2px solid currentColor;
+    border-radius: 50%;
+    border-top-color: transparent;
+    animation: spin 0.6s linear infinite;
+}
+
+/* Mobile menu slide */
+.mobile-menu-enter {
+    animation: slideInRight 0.3s ease-out;
+}
+
+.mobile-menu-leave {
+    animation: slideOutRight 0.3s ease-in;
+}
+
+/* Form improvements - Basic styling for better forms */
+input[type='text'],
+input[type='email'],
+input[type='search'],
+input[type='password'],
+input[type='number'],
+input[type='url'],
+input[type='date'],
+input[type='datetime-local'],
+input[type='month'],
+input[type='week'],
+input[type='time'],
+input[type='tel'],
+textarea,
+select {
+    appearance: none;
+    background-color: white;
+    border: 1px solid theme(colors.gray.300);
+    border-radius: theme(--radius-md);
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    --tw-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
+}
+
+input[type='text']:focus,
+input[type='email']:focus,
+input[type='search']:focus,
+input[type='password']:focus,
+input[type='number']:focus,
+input[type='url']:focus,
+input[type='date']:focus,
+input[type='datetime-local']:focus,
+input[type='month']:focus,
+input[type='week']:focus,
+input[type='time']:focus,
+input[type='tel']:focus,
+textarea:focus,
+select:focus {
+    outline: 2px solid transparent;
+    outline-offset: 2px;
+    --tw-ring-offset-shadow: var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);
+    --tw-ring-shadow: var(--tw-ring-inset) 0 0 0 calc(1px + var(--tw-ring-offset-width)) var(--tw-ring-color);
+    box-shadow: var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #0000);
+    border-color: theme(colors.indigo.500);
+    --tw-ring-color: theme(colors.indigo.500);
 }

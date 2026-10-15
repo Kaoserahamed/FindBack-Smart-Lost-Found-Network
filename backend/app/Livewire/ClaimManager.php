@@ -2,12 +2,11 @@
 
 namespace App\Livewire;
 
+use App\Actions\ManageClaimAction;
 use App\Models\Claim;
 use App\Models\CommunityMembership;
 use App\Models\Report;
-use App\Traits\RecordsItemEvents;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Livewire\WithFileUploads;
@@ -15,9 +14,21 @@ use Livewire\WithFileUploads;
 #[Layout('components.layout')]
 class ClaimManager extends Component
 {
-    use RecordsItemEvents, WithFileUploads;
+    use WithFileUploads;
 
     public Report $report;
+
+    /**
+     * Resolve the shared claim lifecycle action.
+     *
+     * Livewire instantiates components with `new` (so constructor injection is
+     * unavailable) and serializes component state between requests, so the
+     * action is deliberately never stored on a property.
+     */
+    private function claims(): ManageClaimAction
+    {
+        return app(ManageClaimAction::class);
+    }
 
     // Submission state
     public array $answers = [];
@@ -26,15 +37,24 @@ class ClaimManager extends Component
 
     // Review state (per-claim)
     public array $reviewDecision = [];
+
     public array $reviewReason = [];
 
     public function mount(Report $report): void
     {
         $this->report = $report->load(['community', 'category']);
+
+        // Object-level authorization: only the author or an active community
+        // member may open the claim manager for this report. Uses abort_unless
+        // (an HttpException) rather than $this->authorize() so the 403 renders
+        // consistently on both full-page and Livewire AJAX requests.
+        abort_unless(auth()->user()?->can('view', $this->report), 403);
     }
 
     /**
      * The claims the current user is allowed to review on this report.
+     *
+     * Eager-loads the claimant to avoid an N+1 across the review list.
      */
     public function reviewableClaims()
     {
@@ -82,11 +102,10 @@ class ClaimManager extends Component
     {
         $user = Auth::user();
 
-        // Server-side authorization gate.
-        abort_unless($this->canSubmit(), 403);
+        abort_unless($user, 403);
 
         $this->validate([
-            'answers' => ['required', 'array', 'min:1'],
+            'answers' => ['required', 'array', 'min:1', 'max:10'],
             'answers.*' => ['required', 'string', 'max:500'],
             'evidence' => ['nullable', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:5120'],
         ], [
@@ -94,22 +113,13 @@ class ClaimManager extends Component
             'evidence.mimes' => 'Evidence must be jpg, jpeg, png, or pdf.',
         ]);
 
-        DB::transaction(function () use ($user) {
-            $evidencePath = $this->evidence
-                ? $this->evidence->store("claims/{$this->report->uuid}", 'local')
-                : null;
+        $evidencePath = $this->evidence
+            ? $this->evidence->store("claims/{$this->report->uuid}", 'local')
+            : null;
 
-            $claim = $this->report->claims()->create([
-                'claimant_id' => $user->id,
-                'answers' => $this->answers,
-                'evidence_path' => $evidencePath,
-                'status' => 'submitted',
-            ]);
-
-            $this->recordItemEvent($this->report, 'claim_submitted', $user->id, [
-                'claim_id' => $claim->id,
-            ]);
-        });
+        // All business rules (community isolation, report state, self-claim,
+        // duplicate claims) are enforced by ManageClaimAction.
+        $this->claims()->submit($user, $this->report, $this->answers, $evidencePath);
 
         $this->reset(['answers', 'evidence']);
         session()->flash('success', 'Your claim has been submitted and is awaiting review.');
@@ -128,24 +138,12 @@ class ClaimManager extends Component
         $reason = trim($this->reviewReason[$claimId] ?? '');
         if ($reason === '') {
             $this->addError("reviewReason.$claimId", 'A decision reason is required.');
+
             return;
         }
 
-        DB::transaction(function () use ($claim, $decision, $reason, $user) {
-            $claim->update([
-                'status' => $decision,
-                'reviewed_by' => $user->id,
-                'reviewed_at' => now(),
-                'decision_reason' => $reason,
-            ]);
-
-            if ($report = $claim->report) {
-                $this->recordItemEvent($report, 'claim_reviewed', $user->id, [
-                    'claim_id' => $claim->id,
-                    'decision' => $decision,
-                ]);
-            }
-        });
+        // State transitions, row locking and the audit event all live in the action.
+        $this->claims()->review($user, $claim, $decision, $reason);
 
         $this->reset("reviewReason.$claimId");
         session()->flash('success', 'Claim '.$decision.'.');

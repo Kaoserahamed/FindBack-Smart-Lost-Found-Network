@@ -3,6 +3,7 @@
 namespace App\Notifications;
 
 use App\Models\ItemMatch;
+use App\Models\Report;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -30,11 +31,16 @@ class PotentialMatchFound extends Notification implements ShouldQueue
     /**
      * Get the array representation of the notification (database channel).
      *
+     * The recipient owns ONE side of the match, so the report shown to them
+     * must be the *other* side - previously this always returned the found
+     * report, meaning the owner of the found report was notified about their
+     * own report rather than the lost one.
+     *
      * @return array<string, mixed>
      */
     public function toArray(object $notifiable): array
     {
-        $report = $this->counterpartReport();
+        $report = $this->counterpartReport($notifiable);
 
         return [
             'match_id' => $this->match->id,
@@ -55,7 +61,7 @@ class PotentialMatchFound extends Notification implements ShouldQueue
      */
     public function toMail(object $notifiable): MailMessage
     {
-        $report = $this->counterpartReport();
+        $report = $this->counterpartReport($notifiable);
 
         return (new MailMessage)
             ->subject('Potential match found on FindBack')
@@ -68,10 +74,21 @@ class PotentialMatchFound extends Notification implements ShouldQueue
     }
 
     /**
-     * The report on the opposite side of this match, used for context.
+     * The report on the opposite side of this match from the recipient.
      */
-    protected function counterpartReport(): ?\App\Models\Report
+    protected function counterpartReport(object $notifiable): ?Report
     {
+        // If the recipient owns the lost report, the interesting report is the
+        // found one, and vice versa.
+        if ($this->match->lostReport?->user_id === $notifiable->getKey()) {
+            return $this->match->foundReport;
+        }
+
+        if ($this->match->foundReport?->user_id === $notifiable->getKey()) {
+            return $this->match->lostReport;
+        }
+
+        // Fallback (e.g. a moderator-style recipient): show the found side.
         return $this->match->foundReport ?? $this->match->lostReport;
     }
 }
