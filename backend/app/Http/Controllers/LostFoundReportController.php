@@ -5,11 +5,14 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreReportRequest;
 use App\Jobs\GenerateMatches;
 use App\Models\Report;
+use App\Traits\RecordsItemEvents;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
 
 class LostFoundReportController extends Controller
 {
+    use RecordsItemEvents;
+
     /**
      * Store a newly created lost/found report.
      *
@@ -44,14 +47,10 @@ class LostFoundReportController extends Controller
             }
 
             // 3. Record the initial audit-trail event.
-            $report->events()->create([
-                'user_id' => $user->id,
-                'action' => 'created',
-                'metadata' => [
-                    'type' => $report->type,
-                    'community_id' => $report->community_id,
-                    'photos' => $report->photos()->count(),
-                ],
+            $this->recordItemEvent($report, 'created', $user->id, [
+                'type' => $report->type,
+                'community_id' => $report->community_id,
+                'photos' => $report->photos()->count(),
             ]);
 
             return $report;

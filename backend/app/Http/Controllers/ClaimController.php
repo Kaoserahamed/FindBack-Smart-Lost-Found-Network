@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreClaimRequest;
 use App\Models\Claim;
 use App\Models\Report;
+use App\Notifications\ClaimStatusUpdated;
+use App\Traits\RecordsItemEvents;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -12,6 +14,8 @@ use Illuminate\Validation\Rule;
 
 class ClaimController extends Controller
 {
+    use RecordsItemEvents;
+
     /**
      * Store a newly submitted claim against a found report.
      *
@@ -37,12 +41,8 @@ class ClaimController extends Controller
                 'status' => 'submitted',
             ]);
 
-            $report->events()->create([
-                'user_id' => $user->id,
-                'action' => 'claim_submitted',
-                'metadata' => [
-                    'claim_id' => $claim->id,
-                ],
+            $this->recordItemEvent($report, 'claim_submitted', $user->id, [
+                'claim_id' => $claim->id,
             ]);
 
             return $claim;
@@ -77,15 +77,16 @@ class ClaimController extends Controller
                 'decision_reason' => $validated['decision_reason'],
             ]);
 
-            $claim->report?->events()->create([
-                'user_id' => $user->id,
-                'action' => 'claim_reviewed',
-                'metadata' => [
+            if ($report = $claim->report) {
+                $this->recordItemEvent($report, 'claim_reviewed', $user->id, [
                     'claim_id' => $claim->id,
                     'decision' => $validated['decision'],
-                ],
-            ]);
+                ]);
+            }
         });
+
+        // Notify the claimant that their claim was approved or rejected.
+        $claim->claimant?->notify(new ClaimStatusUpdated($claim));
 
         $message = $validated['decision'] === 'approved'
             ? 'Claim approved.'
@@ -126,14 +127,12 @@ class ClaimController extends Controller
                 'status' => 'resolved',
             ]);
 
-            $report?->events()->create([
-                'user_id' => $user->id,
-                'action' => 'custody_transferred',
-                'metadata' => [
+            if ($report) {
+                $this->recordItemEvent($report, 'custody_transferred', $user->id, [
                     'claim_id' => $claim->id,
                     'to_user_id' => $claim->claimant_id,
-                ],
-            ]);
+                ]);
+            }
         });
 
         return back()->with('success', 'Handover completed. The item has been returned.');
